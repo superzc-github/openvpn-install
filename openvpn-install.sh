@@ -633,7 +633,11 @@ function installOpenVPN() {
 		else
 			PUBLIC_IP=$(curl -4 https://ifconfig.co)
 		fi
-		ENDPOINT=${ENDPOINT:-$PUBLIC_IP}
+	    if [[ $ENDPOINT != "" ]]; then
+	    	echo "Will use input endpoint: $ENDPOINT"
+		else
+			ENDPOINT=${ENDPOINT:-$PUBLIC_IP}	
+	    fi
 	fi
 
 	# Run setup questions first, and set other variales if auto-install
@@ -855,7 +859,7 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 		fi
 		;;
 	esac
-	echo 'push "route push_route_ipv4"' >>/etc/openvpn/server.conf
+	echo 'push "route $PUSH_ROUTE_IPV4"' >>/etc/openvpn/server.conf
 
 	# IPv6 network settings if needed
 	if [[ $IPV6_SUPPORT == 'y' ]]; then
@@ -863,7 +867,7 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 tun-ipv6
 push tun-ipv6
 push "route-ipv6 2000::/3"
-push "route push_route_ipv6"' >>/etc/openvpn/server.conf
+push "route $PUSH_ROUTE_IPV6"' >>/etc/openvpn/server.conf
 	fi
 
 	if [[ $COMPRESSION_ENABLED == "y" ]]; then
