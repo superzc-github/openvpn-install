@@ -27,12 +27,13 @@ function checkOS() {
 				echo ""
 				echo "However, if you're using Debian >= 9 or unstable/testing then you can continue, at your own risk."
 				echo ""
-				until [[ $CONTINUE =~ (y|n) ]]; do
-					read -rp "Continue? [y/n]: " -e CONTINUE
-				done
-				if [[ $CONTINUE == "n" ]]; then
-					exit 1
-				fi
+                exit 1
+				#until [[ $CONTINUE =~ (y|n) ]]; do
+				#	read -rp "Continue? [y/n]: " -e CONTINUE
+				#done
+				#if [[ $CONTINUE == "n" ]]; then
+				#	exit 1
+				#fi
 			fi
 		elif [[ $ID == "ubuntu" ]]; then
 			OS="ubuntu"
@@ -42,12 +43,13 @@ function checkOS() {
 				echo ""
 				echo "However, if you're using Ubuntu >= 16.04 or beta, then you can continue, at your own risk."
 				echo ""
-				until [[ $CONTINUE =~ (y|n) ]]; do
-					read -rp "Continue? [y/n]: " -e CONTINUE
-				done
-				if [[ $CONTINUE == "n" ]]; then
-					exit 1
-				fi
+                exit 1
+				#until [[ $CONTINUE =~ (y|n) ]]; do
+				#	read -rp "Continue? [y/n]: " -e CONTINUE
+				#done
+				#if [[ $CONTINUE == "n" ]]; then
+				#	exit 1
+				#fi
 			fi
 		fi
 	elif [[ -e /etc/system-release ]]; then
@@ -631,7 +633,11 @@ function installOpenVPN() {
 		else
 			PUBLIC_IP=$(curl -4 https://ifconfig.co)
 		fi
-		ENDPOINT=${ENDPOINT:-$PUBLIC_IP}
+	    if [[ $ENDPOINT != "" ]]; then
+	    	echo "Will use input endpoint: $ENDPOINT"
+		else
+			ENDPOINT=${ENDPOINT:-$PUBLIC_IP}	
+	    fi
 	fi
 
 	# Run setup questions first, and set other variales if auto-install
@@ -853,7 +859,7 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 		fi
 		;;
 	esac
-	echo 'push "redirect-gateway def1 bypass-dhcp"' >>/etc/openvpn/server.conf
+	echo 'push "route $PUSH_ROUTE_IPV4"' >>/etc/openvpn/server.conf
 
 	# IPv6 network settings if needed
 	if [[ $IPV6_SUPPORT == 'y' ]]; then
@@ -861,7 +867,7 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 tun-ipv6
 push tun-ipv6
 push "route-ipv6 2000::/3"
-push "redirect-gateway ipv6"' >>/etc/openvpn/server.conf
+push "route $PUSH_ROUTE_IPV6"' >>/etc/openvpn/server.conf
 	fi
 
 	if [[ $COMPRESSION_ENABLED == "y" ]]; then
