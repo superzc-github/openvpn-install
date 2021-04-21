@@ -1,8 +1,15 @@
 #!/bin/bash
+# Secure OpenVPN server installer for Debian, Ubuntu, CentOS, Amazon Linux 2, Fedora, Oracle Linux 8 and Arch Linux
+# This script is refered from https://github.com/angristan/openvpn-install
+
 # shellcheck disable=SC1091,SC2164,SC2034,SC1072,SC1073,SC1009
 
-# Secure OpenVPN server installer for Debian, Ubuntu, CentOS, Amazon Linux 2, Fedora, Oracle Linux 8 and Arch Linux
-# https://github.com/angristan/openvpn-install
+function cidr_to_netmask() {
+    cidr_prefix="$(echo $1 | cut -d'/' -f1)"
+    cidr_postfix="$(echo $1 | cut -d'/' -f2)"
+    value=$(( 0xffffffff ^ ((1 << (32 - $cidr_postfix)) - 1) ))
+    echo "$cidr_prefix $(( (value >> 24) & 0xff )).$(( (value >> 16) & 0xff )).$(( (value >> 8) & 0xff )).$(( value & 0xff ))"
+}
 
 function isRoot() {
 	if [ "$EUID" -ne 0 ]; then
@@ -627,6 +634,14 @@ function installOpenVPN() {
 		PASS=${PASS:-1}
 		CONTINUE=${CONTINUE:-y}
 
+		# Handle custom server cidr
+		if [[ $SERVER_CIDR != "" ]]; then
+			echo "Will use custom server cidr: $SERVER_CIDR"
+		else
+			SERVER_CIDR="10.8.0.0/24"
+			echo "Will use default server cidr: $SERVER_CIDR"
+		fi 
+
 		# Behind NAT, we'll default to the publicly reachable IPv4/IPv6.
 		if [[ $IPV6_SUPPORT == "y" ]]; then
 			PUBLIC_IP=$(curl https://ifconfig.co)
@@ -634,7 +649,7 @@ function installOpenVPN() {
 			PUBLIC_IP=$(curl -4 https://ifconfig.co)
 		fi
 	    if [[ $ENDPOINT != "" ]]; then
-	    	echo "Will use input endpoint: $ENDPOINT"
+	    	echo "Will use custom endpoint: $ENDPOINT"
 		else
 			ENDPOINT=${ENDPOINT:-$PUBLIC_IP}	
 	    fi
@@ -785,7 +800,7 @@ persist-key
 persist-tun
 keepalive 10 120
 topology subnet
-server 10.8.0.0 255.255.255.0
+server $(cidr_to_netmask $SERVER_CIDR)
 ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 
 	# DNS resolvers
@@ -971,7 +986,7 @@ verb 3" >>/etc/openvpn/server.conf
 
 	# Script to add rules
 	echo "#!/bin/sh
-iptables -t nat -I POSTROUTING 1 -s 10.8.0.0/24 -o $NIC -j MASQUERADE
+iptables -t nat -I POSTROUTING 1 -s $SERVER_CIDR -o $NIC -j MASQUERADE
 iptables -I INPUT 1 -i tun0 -j ACCEPT
 iptables -I FORWARD 1 -i $NIC -o tun0 -j ACCEPT
 iptables -I FORWARD 1 -i tun0 -o $NIC -j ACCEPT
@@ -987,7 +1002,7 @@ ip6tables -I INPUT 1 -i $NIC -p $PROTOCOL --dport $PORT -j ACCEPT" >>/etc/iptabl
 
 	# Script to remove rules
 	echo "#!/bin/sh
-iptables -t nat -D POSTROUTING -s 10.8.0.0/24 -o $NIC -j MASQUERADE
+iptables -t nat -D POSTROUTING -s $SERVER_CIDR -o $NIC -j MASQUERADE
 iptables -D INPUT -i tun0 -j ACCEPT
 iptables -D FORWARD -i $NIC -o tun0 -j ACCEPT
 iptables -D FORWARD -i tun0 -o $NIC -j ACCEPT
