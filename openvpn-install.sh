@@ -115,6 +115,7 @@ function initialCheck() {
 
 function installUnbound() {
 	# If Unbound isn't installed, install it
+	echo "Unbound installation in progress..."
 	if [[ ! -e /etc/unbound/unbound.conf ]]; then
 
 		if [[ $OS =~ (debian|ubuntu) ]]; then
@@ -622,6 +623,8 @@ function installQuestions() {
 function installOpenVPN() {
 	if [[ $AUTO_INSTALL == "y" ]]; then
 		# Set default choices so that no questions will be asked.
+		echo "AUTO_INSTALL mode was enabled"
+		echo "Set default choices so that no questions will be asked"
 		APPROVE_INSTALL=${APPROVE_INSTALL:-y}
 		APPROVE_IP=${APPROVE_IP:-y}
 		IPV6_SUPPORT=${IPV6_SUPPORT:-n}
@@ -634,13 +637,31 @@ function installOpenVPN() {
 		PASS=${PASS:-1}
 		CONTINUE=${CONTINUE:-y}
 
+		# Assign egress network interface for auto installation 
+		if [[ $NIC_OUT != ""]]; then
+			echo "Will assign custom network interface for egress: $NIC_OUT"
+			NIC=$NIC_OUT
+		else
+			# Get the "public" interface from the default route
+			NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
+			echo "Will use default network interface for egress: $NIC"
+		fi
+		
 		# Handle custom server cidr
 		if [[ $SERVER_CIDR != "" ]]; then
 			echo "Will use custom server cidr: $SERVER_CIDR"
 		else
+			# Assign a default server cidr for config
 			SERVER_CIDR="10.8.0.0/24"
 			echo "Will use default server cidr: $SERVER_CIDR"
-		fi 
+		fi
+
+		# Print custom push route for user visibility
+		echo "Will use custom push route config for IP arrangements:"
+		for element in "${PUSH_ROUTE_IPV4[@]}"
+			do
+			    echo "$element"
+			done
 
 		# Behind NAT, we'll default to the publicly reachable IPv4/IPv6.
 		if [[ $IPV6_SUPPORT == "y" ]]; then
@@ -658,8 +679,7 @@ function installOpenVPN() {
 	# Run setup questions first, and set other variales if auto-install
 	installQuestions
 
-	# Get the "public" interface from the default route
-	NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
+	# Get the "public" interface from the default route for IPv6
 	if [[ -z $NIC ]] && [[ $IPV6_SUPPORT == 'y' ]]; then
 		NIC=$(ip -6 route show default | sed -ne 's/^default .* dev \([^ ]*\) .*$/\1/p')
 	fi
@@ -874,7 +894,11 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 		fi
 		;;
 	esac
-	echo 'push "route $PUSH_ROUTE_IPV4"' >>/etc/openvpn/server.conf
+	for element in "${PUSH_ROUTE_IPV4[@]}"
+		do
+			echo "push \"route $PUSH_ROUTE_IPV4\"" >>/etc/openvpn/server.conf
+		done
+	
 
 	# IPv6 network settings if needed
 	if [[ $IPV6_SUPPORT == 'y' ]]; then
@@ -917,6 +941,8 @@ tls-version-min 1.2
 tls-cipher $CC_CIPHER
 client-config-dir /etc/openvpn/ccd
 status /var/log/openvpn/status.log
+log /var/log/openvpn/openvpn.log
+log-append /var/log/openvpn/openvpn.log
 verb 3" >>/etc/openvpn/server.conf
 
 	# Create client-config-dir dir
