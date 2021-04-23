@@ -897,7 +897,7 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 	esac
 	for element in "${PUSH_ROUTE_IPV4[@]}"
 		do
-			echo "push \"route $PUSH_ROUTE_IPV4\"" >>/etc/openvpn/server.conf
+			echo "push \"route $element\"" >>/etc/openvpn/server.conf
 		done
 	
 
