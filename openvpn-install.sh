@@ -658,6 +658,7 @@ function installOpenVPN() {
 
 		# Print custom push route for user visibility
 		echo "Will use custom push route config for IP arrangements:"
+		IFS="," read -ra PUSH_ROUTE_IPV4 <<< "$PUSH_ROUTE_IPV4_STR"
 		for element in "${PUSH_ROUTE_IPV4[@]}"
 			do
 			    echo "$element"
