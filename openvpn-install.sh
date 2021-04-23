@@ -5,9 +5,9 @@
 # shellcheck disable=SC1091,SC2164,SC2034,SC1072,SC1073,SC1009
 
 function cidr_to_netmask() {
-    cidr_prefix="$(echo $1 | cut -d'/' -f1)"
-    cidr_postfix="$(echo $1 | cut -d'/' -f2)"
-    value=$(( 0xffffffff ^ ((1 << (32 - $cidr_postfix)) - 1) ))
+    cidr_prefix="$(echo "$1" | cut -d'/' -f1)"
+    cidr_postfix="$(echo "$1" | cut -d'/' -f2)"
+    value=$(( 0xffffffff ^ ((1 << (32 - ${cidr_postfix})) - 1) ))
     echo "$cidr_prefix $(( (value >> 24) & 0xff )).$(( (value >> 16) & 0xff )).$(( (value >> 8) & 0xff )).$(( value & 0xff ))"
 }
 
@@ -638,7 +638,7 @@ function installOpenVPN() {
 		CONTINUE=${CONTINUE:-y}
 
 		# Assign egress network interface for auto installation 
-		if [[ $NIC_OUT != ""]]; then
+		if [[ $NIC_OUT != "" ]]; then
 			echo "Will assign custom network interface for egress: $NIC_OUT"
 			NIC=$NIC_OUT
 		else
@@ -646,7 +646,7 @@ function installOpenVPN() {
 			NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
 			echo "Will use default network interface for egress: $NIC"
 		fi
-		
+
 		# Handle custom server cidr
 		if [[ $SERVER_CIDR != "" ]]; then
 			echo "Will use custom server cidr: $SERVER_CIDR"
