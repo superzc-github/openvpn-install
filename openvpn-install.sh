@@ -640,7 +640,7 @@ function installOpenVPN() {
 		# Assign egress network interface for auto installation 
 		if [[ $NIC_OUT != "" ]]; then
 			echo "Will assign custom network interface for egress: $NIC_OUT"
-			NIC=$NIC_OUT
+			NIC="$NIC_OUT"
 		else
 			# Get the "public" interface from the default route
 			NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
