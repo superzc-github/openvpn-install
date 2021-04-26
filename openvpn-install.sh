@@ -637,16 +637,6 @@ function installOpenVPN() {
 		PASS=${PASS:-1}
 		CONTINUE=${CONTINUE:-y}
 
-		# Assign egress network interface for auto installation 
-		if [[ $NIC_OUT != "" ]]; then
-			echo "Will assign custom network interface for egress: $NIC_OUT"
-			NIC="$NIC_OUT"
-		else
-			# Get the "public" interface from the default route
-			NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
-			echo "Will use default network interface for egress: $NIC"
-		fi
-
 		# Handle custom server cidr
 		if [[ $SERVER_CIDR != "" ]]; then
 			echo "Will use custom server cidr: $SERVER_CIDR"
@@ -679,6 +669,10 @@ function installOpenVPN() {
 
 	# Run setup questions first, and set other variales if auto-install
 	installQuestions
+
+	# Get the "public" interface from the default route
+	NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
+	echo "Will use default network interface for egress: $NIC"
 
 	# Get the "public" interface from the default route for IPv6
 	if [[ -z $NIC ]] && [[ $IPV6_SUPPORT == 'y' ]]; then
