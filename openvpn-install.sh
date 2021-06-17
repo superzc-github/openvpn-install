@@ -633,17 +633,9 @@ function installOpenVPN() {
 		COMPRESSION_ENABLED=${COMPRESSION_ENABLED:-n}
 		CUSTOMIZE_ENC=${CUSTOMIZE_ENC:-n}
 		CLIENT=${CLIENT:-client}
+		DNS=${DNS:-9}
 		PASS=${PASS:-1}
 		CONTINUE=${CONTINUE:-y}
-
-		# Hanld custom DNS server
-		if [[ -z $DNS1 ]]
-			DNS=${DNS:-1}
-		else
-			DNS=${DNS:-14}
-			echo "Will use custom primary DNS: $DNS1"
-			echo "Will use custom secondary DNS: $DNS2"
-		if
 
 		# Handle custom server cidr
 		if [[ $SERVER_CIDR != "" ]]; then
@@ -877,6 +869,9 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 	9) # Google
 		echo 'push "dhcp-option DNS 8.8.8.8"' >>/etc/openvpn/server.conf
 		echo 'push "dhcp-option DNS 8.8.4.4"' >>/etc/openvpn/server.conf
+		# Route to VPN to make it possible to access google DNS
+		echo 'push "route 8.8.8.8 255.255.255.255"' >>/etc/openvpn/server.conf
+		echo 'push "route 8.8.4.4 255.255.255.255"' >>/etc/openvpn/server.conf
 		;;
 	10) # Yandex Basic
 		echo 'push "dhcp-option DNS 77.88.8.8"' >>/etc/openvpn/server.conf
@@ -891,12 +886,6 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 		echo 'push "dhcp-option DNS 45.90.30.167"' >>/etc/openvpn/server.conf
 		;;
 	13) # Custom DNS
-		echo "push \"dhcp-option DNS $DNS1\"" >>/etc/openvpn/server.conf
-		if [[ $DNS2 != "" ]]; then
-			echo "push \"dhcp-option DNS $DNS2\"" >>/etc/openvpn/server.conf
-		fi
-		;;
-	14) # Custom DNS in AUTO_INSTALL mode
 		echo "push \"dhcp-option DNS $DNS1\"" >>/etc/openvpn/server.conf
 		if [[ $DNS2 != "" ]]; then
 			echo "push \"dhcp-option DNS $DNS2\"" >>/etc/openvpn/server.conf
