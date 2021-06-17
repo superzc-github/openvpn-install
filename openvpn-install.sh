@@ -870,8 +870,8 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 		echo 'push "dhcp-option DNS 8.8.8.8"' >>/etc/openvpn/server.conf
 		echo 'push "dhcp-option DNS 8.8.4.4"' >>/etc/openvpn/server.conf
 		# Route to VPN to make it possible to access google DNS
-		echo 'push "route 8.8.8.8"' >>/etc/openvpn/server.conf
-		echo 'push "route 8.8.4.4"' >>/etc/openvpn/server.conf
+		echo 'push "route 8.8.8.8 255.255.255.255"' >>/etc/openvpn/server.conf
+		echo 'push "route 8.8.4.4 255.255.255.255"' >>/etc/openvpn/server.conf
 		;;
 	10) # Yandex Basic
 		echo 'push "dhcp-option DNS 77.88.8.8"' >>/etc/openvpn/server.conf
