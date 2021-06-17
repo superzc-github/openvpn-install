@@ -630,12 +630,20 @@ function installOpenVPN() {
 		IPV6_SUPPORT=${IPV6_SUPPORT:-n}
 		PORT_CHOICE=${PORT_CHOICE:-1}
 		PROTOCOL_CHOICE=${PROTOCOL_CHOICE:-1}
-		DNS=${DNS:-1}
 		COMPRESSION_ENABLED=${COMPRESSION_ENABLED:-n}
 		CUSTOMIZE_ENC=${CUSTOMIZE_ENC:-n}
 		CLIENT=${CLIENT:-client}
-		PASS=${PASS:-1}
+		PASS=${PASS:-9}
 		CONTINUE=${CONTINUE:-y}
+
+		# Hanld custom DNS server
+		if [[ -z $DNS1 ]]
+			DNS=${DNS:-1}
+		else
+			DNS=${DNS:-14}
+			echo "Will use custom primary DNS: $DNS1"
+			echo "Will use custom secondary DNS: $DNS2"
+		if
 
 		# Handle custom server cidr
 		if [[ $SERVER_CIDR != "" ]]; then
@@ -888,7 +896,15 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 			echo "push \"dhcp-option DNS $DNS2\"" >>/etc/openvpn/server.conf
 		fi
 		;;
+	14) # Custom DNS in AUTO_INSTALL mode
+		echo "push \"dhcp-option DNS $DNS1\"" >>/etc/openvpn/server.conf
+		if [[ $DNS2 != "" ]]; then
+			echo "push \"dhcp-option DNS $DNS2\"" >>/etc/openvpn/server.conf
+		fi
+		;;
 	esac
+
+	# Custom push routes
 	for element in "${PUSH_ROUTE_IPV4[@]}"
 		do
 			echo "push \"route $element\"" >>/etc/openvpn/server.conf
