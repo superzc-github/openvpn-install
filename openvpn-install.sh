@@ -633,7 +633,7 @@ function installOpenVPN() {
 		COMPRESSION_ENABLED=${COMPRESSION_ENABLED:-n}
 		CUSTOMIZE_ENC=${CUSTOMIZE_ENC:-n}
 		CLIENT=${CLIENT:-client}
-		PASS=${PASS:-9}
+		PASS=${PASS:-1}
 		CONTINUE=${CONTINUE:-y}
 
 		# Hanld custom DNS server
