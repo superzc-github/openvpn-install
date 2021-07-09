@@ -896,7 +896,7 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 	# Custom push routes
 	for element in "${PUSH_ROUTE_IPV4[@]}"
 		do
-			if [[ $element == *"redirect-gateway"* ]]
+			if [[ $element == *"redirect-gateway"* ]]; then
 				echo "push \"$element\"" >>/etc/openvpn/server.conf
 			else
 				echo "push \"route $element\"" >>/etc/openvpn/server.conf
