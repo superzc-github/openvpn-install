@@ -629,13 +629,21 @@ function installOpenVPN() {
 		APPROVE_IP=${APPROVE_IP:-y}
 		IPV6_SUPPORT=${IPV6_SUPPORT:-n}
 		PORT_CHOICE=${PORT_CHOICE:-1}
-		PROTOCOL_CHOICE=${PROTOCOL_CHOICE:-1}
 		COMPRESSION_ENABLED=${COMPRESSION_ENABLED:-n}
 		CUSTOMIZE_ENC=${CUSTOMIZE_ENC:-n}
 		CLIENT=${CLIENT:-client}
 		DNS=${DNS:-9}
 		PASS=${PASS:-1}
 		CONTINUE=${CONTINUE:-y}
+
+		# Handle custom VPN protocal
+		if [[ ! -z $VPN_PROTOCOL ]] && [[ ${VPN_PROTOCOL,,} = "tcp" ]];then
+			echo "Will use VPN protocol: TCP"
+			PROTOCOL_CHOICE=${PROTOCOL_CHOICE:-2}
+		else
+			echo "Will use VPN protocol: UDP"
+			PROTOCOL_CHOICE=${PROTOCOL_CHOICE:-1}
+		fi
 
 		# Handle custom server cidr
 		if [[ $SERVER_CIDR != "" ]]; then
