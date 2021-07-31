@@ -5,9 +5,9 @@
 # shellcheck disable=SC1091,SC2164,SC2034,SC1072,SC1073,SC1009
 
 function cidr_to_netmask() {
-    cidr_prefix="$(echo $1 | cut -d'/' -f1)"
-    cidr_postfix="$(echo $1 | cut -d'/' -f2)"
-    value=$(( 0xffffffff ^ ((1 << (32 - $cidr_postfix)) - 1) ))
+    cidr_prefix="$(echo "$1" | cut -d'/' -f1)"
+    cidr_postfix="$(echo "$1" | cut -d'/' -f2)"
+    value=$(( 0xffffffff ^ ((1 << (32 - ${cidr_postfix})) - 1) ))
     echo "$cidr_prefix $(( (value >> 24) & 0xff )).$(( (value >> 16) & 0xff )).$(( (value >> 8) & 0xff )).$(( value & 0xff ))"
 }
 
@@ -115,6 +115,7 @@ function initialCheck() {
 
 function installUnbound() {
 	# If Unbound isn't installed, install it
+	echo "Unbound installation in progress..."
 	if [[ ! -e /etc/unbound/unbound.conf ]]; then
 
 		if [[ $OS =~ (debian|ubuntu) ]]; then
@@ -407,7 +408,7 @@ function installQuestions() {
 		DH_TYPE="1" # ECDH
 		DH_CURVE="prime256v1"
 		HMAC_ALG="SHA256"
-		TLS_SIG="1" # tls-crypt
+		TLS_SIG="2" # tls-auth
 	else
 		echo ""
 		echo "Choose which cipher you want to use for the data channel:"
@@ -622,25 +623,44 @@ function installQuestions() {
 function installOpenVPN() {
 	if [[ $AUTO_INSTALL == "y" ]]; then
 		# Set default choices so that no questions will be asked.
+		echo "AUTO_INSTALL mode was enabled"
+		echo "Set default choices so that no questions will be asked"
 		APPROVE_INSTALL=${APPROVE_INSTALL:-y}
 		APPROVE_IP=${APPROVE_IP:-y}
 		IPV6_SUPPORT=${IPV6_SUPPORT:-n}
 		PORT_CHOICE=${PORT_CHOICE:-1}
-		PROTOCOL_CHOICE=${PROTOCOL_CHOICE:-1}
-		DNS=${DNS:-1}
 		COMPRESSION_ENABLED=${COMPRESSION_ENABLED:-n}
 		CUSTOMIZE_ENC=${CUSTOMIZE_ENC:-n}
 		CLIENT=${CLIENT:-client}
+		DNS=${DNS:-9}
 		PASS=${PASS:-1}
 		CONTINUE=${CONTINUE:-y}
+
+		# Handle custom VPN protocal
+		if [[ ! -z $VPN_PROTOCOL ]] && [[ ${VPN_PROTOCOL,,} = "tcp" ]];then
+			echo "Will use VPN protocol: TCP"
+			PROTOCOL_CHOICE=${PROTOCOL_CHOICE:-2}
+		else
+			echo "Will use VPN protocol: UDP"
+			PROTOCOL_CHOICE=${PROTOCOL_CHOICE:-1}
+		fi
 
 		# Handle custom server cidr
 		if [[ $SERVER_CIDR != "" ]]; then
 			echo "Will use custom server cidr: $SERVER_CIDR"
 		else
+			# Assign a default server cidr for config
 			SERVER_CIDR="10.8.0.0/24"
 			echo "Will use default server cidr: $SERVER_CIDR"
-		fi 
+		fi
+
+		# Print custom push route for user visibility
+		echo "Will use custom push route config for IP arrangements:"
+		IFS="," read -ra PUSH_ROUTE_IPV4 <<< "$PUSH_ROUTE_IPV4_STR"
+		for element in "${PUSH_ROUTE_IPV4[@]}"
+			do
+			    echo "$element"
+			done
 
 		# Behind NAT, we'll default to the publicly reachable IPv4/IPv6.
 		if [[ $IPV6_SUPPORT == "y" ]]; then
@@ -660,6 +680,9 @@ function installOpenVPN() {
 
 	# Get the "public" interface from the default route
 	NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
+	echo "Will use default network interface for egress: $NIC"
+
+	# Get the "public" interface from the default route for IPv6
 	if [[ -z $NIC ]] && [[ $IPV6_SUPPORT == 'y' ]]; then
 		NIC=$(ip -6 route show default | sed -ne 's/^default .* dev \([^ ]*\) .*$/\1/p')
 	fi
@@ -854,6 +877,9 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 	9) # Google
 		echo 'push "dhcp-option DNS 8.8.8.8"' >>/etc/openvpn/server.conf
 		echo 'push "dhcp-option DNS 8.8.4.4"' >>/etc/openvpn/server.conf
+		# Route to VPN to make it possible to access google DNS
+		echo 'push "route 8.8.8.8 255.255.255.255"' >>/etc/openvpn/server.conf
+		echo 'push "route 8.8.4.4 255.255.255.255"' >>/etc/openvpn/server.conf
 		;;
 	10) # Yandex Basic
 		echo 'push "dhcp-option DNS 77.88.8.8"' >>/etc/openvpn/server.conf
@@ -874,7 +900,17 @@ ifconfig-pool-persist ipp.txt" >>/etc/openvpn/server.conf
 		fi
 		;;
 	esac
-	echo 'push "route $PUSH_ROUTE_IPV4"' >>/etc/openvpn/server.conf
+
+	# Custom push routes
+	for element in "${PUSH_ROUTE_IPV4[@]}"
+		do
+			if [[ $element == *"redirect-gateway"* ]]; then
+				echo "push \"$element\"" >>/etc/openvpn/server.conf
+			else
+				echo "push \"route $element\"" >>/etc/openvpn/server.conf
+			fi
+		done
+	
 
 	# IPv6 network settings if needed
 	if [[ $IPV6_SUPPORT == 'y' ]]; then
@@ -915,8 +951,16 @@ ncp-ciphers $CIPHER
 tls-server
 tls-version-min 1.2
 tls-cipher $CC_CIPHER
+sndbuf 99999999999
+rcvbuf 99999999999
+push "sndbuf 99999999999"
+push "rcvbuf 99999999999"
+fast-io
+txqueuelen 2000
 client-config-dir /etc/openvpn/ccd
 status /var/log/openvpn/status.log
+log /var/log/openvpn/openvpn.log
+log-append /var/log/openvpn/openvpn.log
 verb 3" >>/etc/openvpn/server.conf
 
 	# Create client-config-dir dir
@@ -1172,7 +1216,7 @@ function newClient() {
 	} >>"$homeDir/$CLIENT.ovpn"
 
 	echo ""
-	echo "The configuration file has been written to $homeDir/$CLIENT.ovpn."
+	echo "The configuration file has been written to $homeDir/$CLIENT.ovpn"
 	echo "Download the .ovpn file and import it in your OpenVPN client."
 
 	exit 0
