@@ -953,8 +953,8 @@ tls-version-min 1.2
 tls-cipher $CC_CIPHER
 sndbuf 99999999999
 rcvbuf 99999999999
-push "sndbuf 99999999999"
-push "rcvbuf 99999999999"
+#push "sndbuf 99999999999"
+#push "rcvbuf 99999999999"
 fast-io
 txqueuelen 2000
 client-config-dir /etc/openvpn/ccd
